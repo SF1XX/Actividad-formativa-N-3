@@ -1,0 +1,167 @@
+accion matriz_y_kit es
+ambiente 
+	lectura = registro
+		sensor: entero
+		nro: entero
+		valor: real
+	fr
+
+	archLecturas: archivo de lectura
+	reg: lectura
+
+	lecturas: arreglo [1..1440] de real
+
+	sensorElegido: entero;
+    umbral: real;
+    longitudMinima: entero;s
+
+    maximo, minimo, promedio: real;
+    posMaximo, posMinimo: entero;
+    posicion, posInicio: entero;
+    encontrada: logico;
+    suma: real 
+    i, contador, inicio: entero
+    M, N: entero
+    matriz: arreglo[1..M, 1..N] de real
+    vectorFila: arreglo[1..N] de real
+    promedioPorSensor: arreglo[1..M] de real
+    fila, j: entero
+
+	Procedimiento CargarMatriz(var matriz: ARREGLO[1..M, 1..N] de real; M: entero; N: entero) es
+        Proceso
+            ABRIR E(archLecturas);
+            leer(archLecturas, reg);
+
+            MIENTRAS NFDA(archLecturas) HACER
+                SI reg.sensor >= 1 Y reg.sensor <= M ENTONCES
+                    SI reg.nro >= 1 Y reg.nro <= N ENTONCES
+                        matriz[reg.sensor, reg.nro] := reg.valor;
+                     FIN_SI
+                FIN_SI
+
+                LEER(archLecturas, reg);
+        FIN_MIENTRAS
+
+        CERRAR(archLecturas);
+    fin_procedimiento
+
+
+	Procedimiento Estadisticas(lecturas: ARREGLO[1..N] de real; N: entero; maximo: real; posMaximo: entero; minimo: real; posMinimo: entero; promedio: real) es
+        Proceso
+            suma := 0;
+            maximo := lecturas[1];
+            minimo := lecturas[1];
+            posMaximo := 1;
+            posMinimo := 1;
+
+            PARA i := 1 HASTA N HACER
+                suma := suma + lecturas[i];
+
+                SI lecturas[i] > maximo ENTONCES
+                    maximo := lecturas[i];
+                    posMaximo := i;
+                FIN_SI
+
+                SI lecturas[i] < minimo ENTONCES
+                    minimo := lecturas[i];
+                    posMinimo := i;
+                FIN_SI
+            FIN_PARA
+
+            promedio := suma / N;
+    fin_procedimiento
+
+	Procedimiento DetectarRacha(lecturas: ARREGLO[1..N] de real; N: entero; umbral: real; longitudMinima: entero; encontrada: logico; posInicio: entero);
+		Proceso
+    		contador := 0;
+    		encontrada := FALSO;
+    		posInicio := 0;
+
+    		i := 1;
+
+    		MIENTRAS i <= N Y encontrada = FALSO HACER
+        		SI lecturas[i] > umbral ENTONCES
+           			contador := contador + 1;
+
+            		SI contador = 1 ENTONCES
+                		inicio := i;
+            		FIN_SI
+
+            		SI contador >= longitudMinima ENTONCES
+                		encontrada := VERDADERO;
+                		posInicio := inicio;
+            		FIN_SI
+        		SINO
+           			contador := 0;
+        		FIN_SI
+       			i := i + 1;
+	    	FIN_MIENTRAS
+	fin_procedimiento
+
+	Procedimiento BuscarUmbral(lecturas: ARREGLO[1..N] de real; N: entero; umbral: real; posicion: entero);
+	Proceso
+    	posicion := 0;
+    	i := 1;
+
+    	MIENTRAS i <= N Y posicion = 0 HACER
+        	SI lecturas[i] > umbral ENTONCES
+            	posicion := i;
+        	SINO
+            	i := i + 1;
+        	FIN_SI
+    	FIN_MIENTRAS
+	fin_procedimiento
+
+    Procedimiento ExtraerFila(matriz: ARREGLO[1..M, 1..N] de real; fila: entero; var v: ARREGLO[1..N] de real) es
+        Proceso
+            PARA j := 1 HASTA N HACER
+                v[j] := matriz[fila, j];
+            FIN_PARA
+    fin_procedimiento
+
+Proceso
+    M := 5;
+    N := 1440;
+
+    esc("Ingrese el umbral:");
+    leer(umbral);
+
+    esc("Ingrese la longitud minima de la racha:");
+    leer(longitudMinima);
+
+    CargarMatriz(matriz, M, N);
+
+    PARA fila := 1 HASTA M HACER
+        ExtraerFila(matriz, fila, vectorFila);
+
+        Estadisticas(vectorFila, N,
+                     maximo, posMaximo,
+                     minimo, posMinimo, promedio);
+
+        promedioPorSensor[fila] := promedio;
+
+        esc("Sensor: ", fila);
+        esc("Maximo: ", maximo);
+        esc("Posicion del maximo: ", posMaximo);
+        esc("Minimo: ", minimo);
+        esc("Posicion del minimo: ", posMinimo);
+        esc("Promedio: ", promedio);
+
+        DetectarRacha(vectorFila, N, umbral,
+                      longitudMinima, encontrada, posInicio);
+
+        SI encontrada = VERDADERO ENTONCES
+            esc("Se encontro una racha en el sensor: ", fila);
+            esc("Posicion inicial: ", posInicio);
+        SINO
+            esc("No se encontro una racha en el sensor: ", fila);
+        FIN_SI
+    FIN_PARA;
+
+    Estadisticas(promedioPorSensor, M,
+                 maximo, posMaximo,
+                 minimo, posMinimo, promedio);
+
+    esc("Sensor con mayor promedio: ", posMaximo);
+    esc("Mayor promedio: ", maximo);
+fin_accion
